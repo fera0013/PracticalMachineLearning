@@ -1,0 +1,65 @@
+---
+title: "Coursera Data Science Machine Learning Course Project"
+author: "Ralph Fehrer"
+date: "Sunday, December 14, 2014"
+output: html_document
+---
+```{r}
+library("caret", lib.loc="~/R/win-library/3.1")
+```
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+In this project, the goal will be to predict the kind of activity data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+First we load the training set:
+```{r,echo=TRUE}
+pml.training <- read.csv("C:/Daten/Studium/Coursera/DataScience/PracticalMachineLearning/pml-training.csv", stringsAsFactors=FALSE)
+```
+the pml.training is actually the complete dataset, which is later split into a training and a test set. the pml.testing set is not used for the calculation of model performance, but for part 2 of the course project. 
+
+The kind of activity which has to be predicted is encoded in the "classe" variable. 
+
+A first overview of the dataset reveals a large number of columns with mostly NAs or empty strings:
+```{r, echo=TRUE}
+str(pml.training,list.len=200)
+```
+In order to clean up the dataset, we first remove all columns with more than 1500 missing values:
+```{r,echo=TRUE}
+indicesOfNaColumns<-apply(pml.training, 2, function(x) length(which(!is.na(x)))>1500)
+indicesOfEmptyStrColumns<-apply(pml.training[,indicesOfNaColumns], 2, function(x) length(which(x!=""))>1500)
+dataset<-pml.training[,indicesOfNaColumns, drop=FALSE]
+dataset<-dataset[,indicesOfEmptyStrColumns, drop=FALSE]
+```
+We then remove the irrelevant X-column and the redundant cvtd_timestamp column:
+
+```{r,echo=TRUE}
+dataset<-dataset[,-c(1,5)]
+```
+And finally, to make sure that the dataset can be processed by any model, we make sure that all variables are numeric:
+```{r,echo=TRUE}
+dataset$user_name<-as.numeric(as.factor(dataset$user_name))
+dataset$new_window<-as.numeric(as.factor(dataset$new_window))
+
+```
+We now split pml.training into an training and a testing set:
+```{r,echo=TRUE}
+trainIndices<-createDataPartition(y=dataset$classe,p=0.75,list=FALSE)
+training<-dataset[trainIndices,]
+testing<-dataset[-trainIndices,]
+```
+And then, after changing the classe variable to a factor, we fit a random forest model to the training set:
+```{r,echo=TRUE}
+training$classe<-as.factor(training$classe)
+modelFit<-train(classe ~ .,method="rf",data=training)
+modelFit
+```
+To see how well we did with our approach, we predict the hold out training set and calculate some performance statistics:
+```{r,echo=TRUE}
+prediction<-predict(modelFit,newdata=testing[,-58])
+confusionMatrix(prediction,testing$classe)
+```
+An accuracy of > 0.9 shows, that the preprocessing steps and the choice of model were succesful for this dataset.
+
+
+
+
