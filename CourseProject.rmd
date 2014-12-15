@@ -23,7 +23,7 @@ A first overview of the dataset reveals a large number of columns with mostly NA
 ```{r, echo=TRUE}
 str(pml.training,list.len=200)
 ```
-In order to clean up the dataset, we first remove all columns with more than 1500 missing values:
+In order to clean up the dataset, we first remove all columns with less than 1500 actual values:
 ```{r,echo=TRUE}
 indicesOfNaColumns<-apply(pml.training, 2, function(x) length(which(!is.na(x)))>1500)
 indicesOfEmptyStrColumns<-apply(pml.training[,indicesOfNaColumns], 2, function(x) length(which(x!=""))>1500)
@@ -35,7 +35,7 @@ We then remove the irrelevant X-column and the redundant cvtd_timestamp column:
 ```{r,echo=TRUE}
 dataset<-dataset[,-c(1,5)]
 ```
-And finally, to make sure that the dataset can be processed by any model, we make sure that all variables are numeric:
+And finally, to make sure that the dataset can be processed by any model, we convert all variables to numeric:
 ```{r,echo=TRUE}
 dataset$user_name<-as.numeric(as.factor(dataset$user_name))
 dataset$new_window<-as.numeric(as.factor(dataset$new_window))
@@ -51,14 +51,17 @@ And then, after changing the classe variable to a factor, we fit a random forest
 ```{r,echo=TRUE}
 training$classe<-as.factor(training$classe)
 modelFit<-train(classe ~ .,method="rf",data=training)
+```
+The random forest algorithm implicitely does 3 validation runs, to find the best value for the mtry parameter. The accuracies for these 3 runs can be used as an in sample estimate for the range of the expected out of sample error:
+```{r}
 modelFit
 ```
-To see how well we did with our approach, we predict the hold out training set and calculate some performance statistics:
+To calculate the out of sample error, we use the model to predict on the testing set:
 ```{r,echo=TRUE}
 prediction<-predict(modelFit,newdata=testing[,-58])
 confusionMatrix(prediction,testing$classe)
 ```
-An accuracy of > 0.9 shows, that the preprocessing steps and the choice of model were succesful for this dataset.
+
 
 
 
